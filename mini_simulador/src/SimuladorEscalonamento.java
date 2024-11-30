@@ -31,19 +31,30 @@ public class SimuladorEscalonamento {
     private final Queue<Processo> filaProntos = new LinkedList<>();
     private int quantum = 1;
 
+    // Códigos de cores ANSI
+    private static final String[] Cores = {
+            "\u001B[31m", // Vermelho
+            "\u001B[32m", // Verde
+            "\u001B[33m", // Amarelo
+            "\u001B[34m", // Azul
+            "\u001B[35m"  // Magenta
+    };
+    private static final String resetar_Cor = "\u001B[0m"; // Resetar cor para o padrão
+
     public static void main(String[] args) {
         SimuladorEscalonamento simulador = new SimuladorEscalonamento();
         simulador.menu();
     }
 
     private void menu() {
+        String cor = "\u001B[35m";
         while (true) {
-            System.out.println("\nSimulador de Escalonamento");
-            System.out.println("1. Criar Processo");
-            System.out.println("2. Configurar Quantum");
-            System.out.println("3. Iniciar Escalonamento (Round Robin)");
-            System.out.println("4. Sair");
-            System.out.print("Escolha uma opção: ");
+            exibirMensagemColorida(cor,"\nSimulador de Escalonamento");
+            exibirMensagemColorida(cor,"1. Criar Processo");
+            exibirMensagemColorida(cor,"2. Configurar Quantum");
+            exibirMensagemColorida(cor,"3. Iniciar Escalonamento");
+            exibirMensagemColorida(cor,"4. Sair");
+            exibirMensagemColorida(cor,"Escolha uma opção: ");
             int opcao = scanner.nextInt();
             scanner.nextLine(); // Limpar buffer
 
@@ -52,15 +63,16 @@ public class SimuladorEscalonamento {
                 case 2 -> configurarQuantum();
                 case 3 -> iniciarEscalonamento();
                 case 4 -> {
-                    System.out.println("Encerrando simulador...");
+                    exibirMensagemColorida(cor,"Encerrando simulador...");
                     return;
                 }
-                default -> System.out.println("Opção inválida.");
+                default -> exibirMensagemColorida(cor,"Opção inválida.");
             }
         }
     }
 
     private void criarProcesso() {
+        String cor = "\u001B[33m";
         System.out.print("ID do processo: ");
         int id = scanner.nextInt();
         scanner.nextLine(); // Limpar buffer
@@ -78,22 +90,24 @@ public class SimuladorEscalonamento {
         int tempoTotalCPU = scanner.nextInt();
 
         filaProntos.add(new Processo(id, nome, prioridade, ioBound, tempoTotalCPU));
-        System.out.println("Processo criado e adicionado à fila de prontos.");
+        exibirMensagemColorida(cor,"Processo criado e adicionado à fila de prontos.");
     }
 
     private void configurarQuantum() {
-        System.out.print("Defina o quantum (em ms): ");
+        String cor = "\u001B[33m";
+        exibirMensagemColorida(cor,"Defina o quantum (em ms): ");
         quantum = scanner.nextInt();
-        System.out.println("Quantum configurado para " + quantum + " ms.");
+        exibirMensagemColorida(cor,"Quantum configurado para " + quantum + " ms.");
     }
 
     private void iniciarEscalonamento() {
+        String cor = "\u001B[33m";
         if (filaProntos.isEmpty()) {
-            System.out.println("Nenhum processo na fila de prontos.");
+            exibirMensagemColorida(cor,"Nenhum processo na fila de prontos.");
             return;
         }
 
-        System.out.print("Escolha o algoritmo (1 - Round Robin, 2 - Prioridade): ");
+        exibirMensagemColorida(cor,"Escolha o algoritmo (1 - Round Robin, 2 - Prioridade): ");
         int escolha = scanner.nextInt();
         scanner.nextLine(); // Limpar buffer
 
@@ -102,15 +116,89 @@ public class SimuladorEscalonamento {
         } else if (escolha == 2) {
             iniciarEscalonamentoPrioridade();
         } else {
-            System.out.println("Opção inválida. Voltando ao menu principal.");
+            exibirMensagemColorida(cor,"Opção inválida. Voltando ao menu principal.");
         }
     }
-    
+
+    private void iniciarEscalonamentoRoundRobin() {
+        String cor = "\u001B[33m";
+        exibirMensagemColorida(cor,"\nIniciando escalonamento Round Robin");
+        List<Processo> listaProcessos = new ArrayList<>(filaProntos);
+        int tempoTotal = 0;
+
+        while (!filaProntos.isEmpty()) {
+            Processo processo = filaProntos.poll();
+            int tempoExecucao = Math.min(quantum, processo.tempoRestante);
+
+            System.out.printf("Executando %s (ID: %d) por %d ms.\n",
+                    processo.nome, processo.id, tempoExecucao);
+
+            processo.tempoRestante -= tempoExecucao;
+            tempoTotal += tempoExecucao;
+
+            // Atualizar tempo de espera dos processos aguardando
+            for (Processo p : filaProntos) {
+                p.tempoEspera += tempoExecucao;
+            }
+
+            // Exibir o estado atual da fila
+            exibirEstadoFila(processo);
+
+            if (processo.tempoRestante > 0) {
+                filaProntos.add(processo); // Reinsere na fila
+            } else {
+                processo.tempoTurnaround = tempoTotal;
+                System.out.printf("%s (ID: %d) concluído.\n", processo.nome, processo.id);
+            }
+        }
+
+        calcularMetricas(listaProcessos);
+    }
+
+    private void iniciarEscalonamentoPrioridade() {
+        String cor = "\u001B[33m";
+        exibirMensagemColorida(cor,"\nIniciando escalonamento por Prioridade");
+        List<Processo> listaProcessos = new ArrayList<>(filaProntos);
+        listaProcessos.sort(Comparator.comparingInt(p -> p.prioridade));
+
+        int tempoTotal = 0;
+        for (Processo processo : listaProcessos) {
+            System.out.printf("Executando %s (ID: %d) com prioridade %d.\n",
+                    processo.nome, processo.id, processo.prioridade);
+
+            tempoTotal += processo.tempoTotalCPU;
+            processo.tempoEspera = tempoTotal - processo.tempoTotalCPU;
+            processo.tempoTurnaround = tempoTotal;
+
+            System.out.printf("%s (ID: %d) concluído.\n", processo.nome, processo.id);
+            // Exibir o estado atual da fila
+            exibirEstadoFila(processo);
+        }
+
+        calcularMetricas(listaProcessos);
+    }
+
+    private void exibirEstadoFila(Processo processoAtivo) {
+        String cor = "\u001B[33m";
+        exibirMensagemColorida(cor,"\nEstado Atual da Fila:");
+        System.out.printf("Processo ativo: %s (ID: %d)\n", processoAtivo.nome, processoAtivo.id);
+
+        if (filaProntos.isEmpty()) {
+            System.out.println("Nenhum processo aguardando.");
+        } else {
+            exibirMensagemColorida(cor,"Processos aguardando:");
+            for (Processo p : filaProntos) {
+                System.out.printf("- %s (ID: %d) com %d ms restantes.\n", p.nome, p.id, p.tempoRestante);
+            }
+        }
+    }
+
     private void calcularMetricas(List<Processo> processos) {
+        String cor = "\u001B[33m";
         int somaTurnaround = 0;
         int somaEspera = 0;
 
-        System.out.println("\nMétricas de Execução:");
+        exibirMensagemColorida(cor,"\nMétricas de Execução:");
         for (Processo p : processos) {
             somaTurnaround += p.tempoTurnaround;
             somaEspera += p.tempoEspera;
@@ -124,5 +212,9 @@ public class SimuladorEscalonamento {
         System.out.printf("\nTempo médio de Turnaround: %.2f ms\n", mediaTurnaround);
         System.out.printf("Tempo médio de Espera: %.2f ms\n", mediaEspera);
     }
-}
 
+    // Função para imprimir mensagens coloridas
+    private static void exibirMensagemColorida(String cor, String mensagem) {
+        System.out.println(cor + mensagem + resetar_Cor);
+    }
+}
