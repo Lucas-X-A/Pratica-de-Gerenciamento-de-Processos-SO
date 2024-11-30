@@ -8,8 +8,8 @@ public class Main {
     private static final StringBuffer buffer2 = new StringBuffer("Buffer2");
 
     // Locks para garantir exclusão mútua
-    private static final Lock lockBuffer1 = new ReentrantLock();
-    private static final Lock lockBuffer2 = new ReentrantLock();
+    private static final Lock bloqueioBuffer1 = new ReentrantLock();
+    private static final Lock bloqueioBuffer2 = new ReentrantLock();
 
     // Códigos de cores ANSI para cada thread
     private static final String[] Cores = {
@@ -36,23 +36,23 @@ public class Main {
         try {
             // Tentar acessar o primeiro recurso (buffer1)
             exibirMensagem(cor, "Thread " + threadId + " tentando acessar Buffer1.");
-            lockBuffer1.lock(); // Lock para o buffer1
+            bloqueioBuffer1.lock(); // Lock para o buffer1
             try {
                 exibirMensagem(cor, "Thread " + threadId + " acessou Buffer1.");
                 consumirRecurso("Buffer1", threadId, cor);
             } finally {
-                lockBuffer1.unlock(); // Libera o lock
+                bloqueioBuffer1.unlock(); // Libera o lock
                 exibirMensagem(cor, "Thread " + threadId + " liberou Buffer1.");
             }
 
             // Tentar acessar o segundo recurso (buffer2)
             exibirMensagem(cor, "Thread " + threadId + " tentando acessar Buffer2.");
-            lockBuffer2.lock(); // Lock para o buffer2
+            bloqueioBuffer2.lock(); // Lock para o buffer2
             try {
                 exibirMensagem(cor, "Thread " + threadId + " acessou Buffer2.");
                 consumirRecurso("Buffer2", threadId, cor);
             } finally {
-                lockBuffer2.unlock(); // Libera o lock
+                bloqueioBuffer2.unlock(); // Libera o lock
                 exibirMensagem(cor, "Thread " + threadId + " liberou Buffer2.");
             }
 
