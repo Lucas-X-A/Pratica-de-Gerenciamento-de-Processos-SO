@@ -93,35 +93,19 @@ public class SimuladorEscalonamento {
             return;
         }
 
-        System.out.println("\nIniciando escalonamento (Round Robin)...");
-        List<Processo> listaProcessos = new ArrayList<>(filaProntos);
-        int tempoTotal = 0;
+        System.out.print("Escolha o algoritmo (1 - Round Robin, 2 - Prioridade): ");
+        int escolha = scanner.nextInt();
+        scanner.nextLine(); // Limpar buffer
 
-        while (!filaProntos.isEmpty()) {
-            Processo processo = filaProntos.poll();
-            int tempoExecucao = Math.min(quantum, processo.tempoRestante);
-
-            System.out.printf("Executando processo %s (ID: %d) por %d ms.\n",
-                    processo.nome, processo.id, tempoExecucao);
-
-            processo.tempoRestante -= tempoExecucao;
-            tempoTotal += tempoExecucao;
-
-            for (Processo p : filaProntos) {
-                p.tempoEspera += tempoExecucao;
-            }
-
-            if (processo.tempoRestante > 0) {
-                filaProntos.add(processo); // Reinsere na fila
-            } else {
-                processo.tempoTurnaround = tempoTotal;
-                System.out.printf("Processo %s (ID: %d) concluído.\n", processo.nome, processo.id);
-            }
+        if (escolha == 1) {
+            iniciarEscalonamentoRoundRobin();
+        } else if (escolha == 2) {
+            iniciarEscalonamentoPrioridade();
+        } else {
+            System.out.println("Opção inválida. Voltando ao menu principal.");
         }
-
-        calcularMetricas(listaProcessos);
     }
-
+    
     private void calcularMetricas(List<Processo> processos) {
         int somaTurnaround = 0;
         int somaEspera = 0;
